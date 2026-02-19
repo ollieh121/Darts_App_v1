@@ -23,14 +23,26 @@ function LoginForm() {
         redirect: false,
         callbackUrl,
       });
+      
       if (res?.error) {
-        setError("Invalid username or password");
+        console.error("Sign in error:", res.error);
+        setError(`Invalid username or password. ${res.error}`);
+        setLoading(false);
         return;
       }
-      window.location.href = callbackUrl;
-    } catch {
-      setError("Something went wrong");
-    } finally {
+      
+      if (res?.ok) {
+        // Small delay to ensure session is set
+        setTimeout(() => {
+          window.location.href = callbackUrl;
+        }, 100);
+      } else {
+        setError("Login failed. Please try again.");
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Something went wrong. Please try again.");
       setLoading(false);
     }
   }

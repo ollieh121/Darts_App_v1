@@ -8,6 +8,7 @@ interface Team {
   id: string;
   name: string;
   remainingPoints: number;
+  threeDartAverage?: number;
 }
 
 interface GameState {
@@ -47,10 +48,10 @@ export default function ScorerPage() {
         startedAt: null,
         remainingMs: 12 * 60 * 60 * 1000,
         isRunning: false,
-        teams: [
-          { id: "team1", name: "Team 1", remainingPoints: 100000 },
-          { id: "team2", name: "Team 2", remainingPoints: 100000 },
-        ],
+          teams: [
+            { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0 },
+            { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0 },
+          ],
       });
     }
   };
@@ -73,9 +74,10 @@ export default function ScorerPage() {
 
   async function handleAddScore(e: React.FormEvent) {
     e.preventDefault();
-    const score = parseInt(scoreInput, 10);
+    const score = parseInt(scoreInput.trim(), 10);
     if (isNaN(score) || score < 0 || score > 180) {
       setStatus("error");
+      setTimeout(() => setStatus("idle"), 3000);
       return;
     }
     setStatus("idle");
@@ -85,25 +87,40 @@ export default function ScorerPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ teamId: selectedTeam, score }),
       });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Failed to add score" }));
+        setStatus("error");
+        console.error("Score error:", errorData);
+        setTimeout(() => setStatus("idle"), 3000);
+        return;
+      }
       setScoreInput("");
       setStatus("success");
-      fetchGame();
-    } catch {
+      setTimeout(() => setStatus("idle"), 2000);
+      await fetchGame();
+    } catch (err) {
+      console.error("Score submission error:", err);
       setStatus("error");
+      setTimeout(() => setStatus("idle"), 3000);
     }
   }
 
   async function handleStart() {
     try {
-      await fetch("/api/game", {
+      const res = await fetch("/api/game", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "start" }),
       });
-      fetchGame();
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Failed to start timer" }));
+        alert(`Failed to start timer: ${error.error || "Database not connected. Please check your database setup."}`);
+        return;
+      }
+      await fetchGame();
     } catch (err) {
       console.error("Failed to start:", err);
+      alert("Failed to start timer. Please check the console for details.");
     }
   }
 
@@ -204,7 +221,9 @@ export default function ScorerPage() {
           <p className="text-green-400 mt-2 text-sm">Score added.</p>
         )}
         {status === "error" && (
-          <p className="text-red-400 mt-2 text-sm">Invalid score (0–180).</p>
+          <p className="text-red-400 mt-2 text-sm">
+            Invalid score (0–180) or database error. Check console for details.
+          </p>
         )}
       </section>
 
@@ -219,6 +238,9 @@ export default function ScorerPage() {
               <p className="text-slate-400 text-sm">{t.name}</p>
               <p className="text-3xl font-bold text-amber-400 font-mono">
                 {t.remainingPoints.toLocaleString()}
+              </p>
+              <p className="text-slate-500 text-sm mt-2">
+                3-dart avg: <span className="text-slate-300 font-semibold">{t.threeDartAverage?.toFixed(1) || "0.0"}</span>
               </p>
             </div>
           ))}

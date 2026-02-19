@@ -8,11 +8,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  if (!process.env.DATABASE_URL && !process.env.POSTGRES_URL) {
+    return NextResponse.json(
+      { error: "Database not connected. Please set up your Neon database." },
+      { status: 500 }
+    );
+  }
+
   try {
     const body = await request.json();
     const { teamId, score } = body;
 
-    if (!teamId || typeof score !== "number" || score < 0 || score > 180) {
+    // Convert score to number if it's a string
+    const scoreNum = typeof score === "string" ? parseInt(score, 10) : score;
+
+    if (!teamId || typeof scoreNum !== "number" || isNaN(scoreNum) || scoreNum < 0 || scoreNum > 180) {
       return NextResponse.json(
         { error: "Invalid teamId or score (must be 0-180)" },
         { status: 400 }
@@ -25,9 +35,9 @@ export async function POST(request: Request) {
     }
 
     const current = Number(team.remaining_points);
-    const newRemaining = Math.max(0, current - score);
+    const newRemaining = Math.max(0, current - scoreNum);
 
-    await sql`INSERT INTO scores (team_id, score) VALUES (${teamId}, ${score})`;
+    await sql`INSERT INTO scores (team_id, score) VALUES (${teamId}, ${scoreNum})`;
     await sql`
       UPDATE teams 
       SET remaining_points = ${newRemaining}, updated_at = NOW() 

@@ -6,6 +6,7 @@ interface Team {
   id: string;
   name: string;
   remainingPoints: number;
+  threeDartAverage?: number;
 }
 
 interface GameState {
@@ -45,8 +46,8 @@ export default function DisplayPage() {
           remainingMs: 12 * 60 * 60 * 1000,
           isRunning: false,
           teams: [
-            { id: "team1", name: "Team 1", remainingPoints: 100000 },
-            { id: "team2", name: "Team 2", remainingPoints: 100000 },
+            { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0 },
+            { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0 },
           ],
         });
       }
@@ -112,6 +113,9 @@ export default function DisplayPage() {
             </div>
             <p className="text-slate-500 mt-2 text-lg">
               points remaining
+            </p>
+            <p className="text-slate-400 mt-4 text-xl">
+              3-dart avg: <span className="text-amber-300 font-bold">{team.threeDartAverage?.toFixed(1) || "0.0"}</span>
             </p>
           </section>
         ))}
