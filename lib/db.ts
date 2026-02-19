@@ -1,5 +1,9 @@
 import { neon } from "@neondatabase/serverless";
 
-const sql = neon(process.env.POSTGRES_URL!);
+// Neon on Vercel injects DATABASE_URL; POSTGRES_URL is used in some setups
+const connectionString =
+  process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? "";
+
+const sql = neon(connectionString);
 
 export { sql };

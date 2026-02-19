@@ -32,10 +32,23 @@ export default function DisplayPage() {
     const fetchGame = async () => {
       try {
         const res = await fetch("/api/game");
+        if (!res.ok) throw new Error("API error");
         const data = await res.json();
-        setGame(data);
+        if (data && data.teams && Array.isArray(data.teams)) {
+          setGame(data);
+        }
       } catch (err) {
         console.error("Failed to fetch game:", err);
+        // Set default game state on error
+        setGame({
+          startedAt: null,
+          remainingMs: 12 * 60 * 60 * 1000,
+          isRunning: false,
+          teams: [
+            { id: "team1", name: "Team 1", remainingPoints: 100000 },
+            { id: "team2", name: "Team 2", remainingPoints: 100000 },
+          ],
+        });
       }
     };
     fetchGame();
