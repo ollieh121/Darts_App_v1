@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={outfit.variable}>
-      <body className="font-sans antialiased bg-slate-950 text-white min-h-screen">
+      <body className="font-sans antialiased min-h-screen bg-gradient-to-b from-[#003820] via-[#008B57] to-[#002111] text-white">
         <Providers>{children}</Providers>
       </body>
     </html>

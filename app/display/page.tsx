@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 interface Team {
@@ -79,43 +80,72 @@ export default function DisplayPage() {
   if (!game) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-slate-500">Loading...</p>
+        <p className="text-xl text-[#C0E8D5]">Loading...</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen p-6 md:p-10">
-      <header className="flex justify-between items-center mb-8 md:mb-12">
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-          100K Darts Challenge
-        </h1>
-        <div
-          className={`text-4xl md:text-6xl font-mono font-bold tabular-nums ${
-            game.isRunning ? "text-amber-400" : "text-slate-500"
-          }`}
-        >
-          {game.startedAt ? timeDisplay : "12:00:00"}
+    <main className="relative min-h-screen p-6 md:p-10">
+      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
+        <div className="space-y-3 max-w-xl">
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white">
+            100K Darts Challenge
+          </h1>
+          <p className="text-lg md:text-xl text-[#E6F5EC]">
+            Getting men talking about cancer, one dart a time.
+          </p>
+        </div>
+        <div className="flex items-center gap-6">
+          <div
+            className={`text-4xl md:text-6xl font-mono font-bold tabular-nums px-4 py-2 rounded-lg bg-[#01210F]/70 ${
+              game.isRunning ? "text-[#8FE6B0]" : "text-[#6FBF8E]"
+            }`}
+          >
+            {game.startedAt ? timeDisplay : "12:00:00"}
+          </div>
+          <div className="hidden md:block">
+            <Image
+              src="/norton-charity-chuckers.png"
+              alt="Norton Charity Chuckers"
+              width={120}
+              height={120}
+              className="rounded-md shadow-lg"
+            />
+          </div>
         </div>
       </header>
+
+      <div className="md:hidden absolute top-4 right-4">
+        <Image
+          src="/norton-charity-chuckers.png"
+          alt="Norton Charity Chuckers"
+          width={80}
+          height={80}
+          className="rounded-md shadow-lg"
+        />
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
         {game.teams.map((team) => (
           <section
             key={team.id}
-            className="bg-slate-900/80 rounded-2xl p-8 md:p-12 border border-slate-800"
+            className="bg-[#002B18]/80 rounded-2xl p-8 md:p-12 border border-[#09673B]"
           >
-            <h2 className="text-2xl md:text-3xl font-semibold text-slate-300 mb-4">
+            <h2 className="text-2xl md:text-3xl font-semibold text-[#E6F5EC] mb-4">
               {team.name}
             </h2>
-            <div className="text-6xl md:text-8xl font-bold text-amber-400 font-mono tabular-nums">
+            <div className="text-6xl md:text-8xl font-bold text-[#8FE6B0] font-mono tabular-nums">
               {team.remainingPoints.toLocaleString()}
             </div>
-            <p className="text-slate-500 mt-2 text-lg">
+            <p className="text-[#C0E8D5] mt-2 text-lg">
               points remaining
             </p>
-            <p className="text-slate-400 mt-4 text-xl">
-              3-dart avg: <span className="text-amber-300 font-bold">{team.threeDartAverage?.toFixed(1) || "0.0"}</span>
+            <p className="text-[#E6F5EC] mt-4 text-xl">
+              3-dart avg:{" "}
+              <span className="text-[#8FE6B0] font-bold">
+                {team.threeDartAverage?.toFixed(1) || "0.0"}
+              </span>
             </p>
           </section>
         ))}

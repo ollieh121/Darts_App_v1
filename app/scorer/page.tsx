@@ -1,6 +1,7 @@
 "use client";
 
 import { signOut } from "next-auth/react";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -113,8 +114,10 @@ export default function ScorerPage() {
         body: JSON.stringify({ action: "start" }),
       });
       if (!res.ok) {
-        const error = await res.json().catch(() => ({ error: "Failed to start timer" }));
-        alert(`Failed to start timer: ${error.error || "Database not connected. Please check your database setup."}`);
+        const errorData = await res.json().catch(() => ({ error: "Failed to start timer" }));
+        const errorMsg = errorData.error || "Database not connected. Please check your database setup.";
+        const details = errorData.details ? `\n\nDetails: ${errorData.details}` : "";
+        alert(`Failed to start timer: ${errorMsg}${details}`);
         return;
       }
       await fetchGame();
@@ -141,7 +144,7 @@ export default function ScorerPage() {
   if (!game) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-slate-500">Loading...</p>
+        <p className="text-xl text-[#C0E8D5]">Loading...</p>
       </main>
     );
   }
@@ -149,32 +152,58 @@ export default function ScorerPage() {
   return (
     <main className="min-h-screen p-6 max-w-4xl mx-auto">
       <header className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">Scorer</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Scorer</h1>
+          <p className="text-sm text-[#C0E8D5]">
+            Getting men talking about cancer, one dart a time.
+          </p>
+        </div>
         <div className="flex items-center gap-4">
-          <span className="text-slate-400 font-mono">
+          <span className="text-[#E6F5EC] font-mono px-3 py-1 rounded-lg bg-[#01210F]/70">
             {game.startedAt ? formatTime(game.remainingMs) : "12:00:00"}
           </span>
           <Link
             href="/display"
-            className="text-amber-400 hover:text-amber-300 text-sm"
+            className="text-[#8FE6B0] hover:text-white text-sm underline-offset-4 hover:underline"
           >
             View display
           </Link>
           <button
             onClick={() => signOut({ callbackUrl: "/" })}
-            className="text-slate-500 hover:text-slate-300 text-sm"
+            className="text-[#C0E8D5] hover:text-white text-sm"
           >
             Sign out
           </button>
+          <div className="hidden md:block">
+            <Image
+              src="/norton-charity-chuckers.png"
+              alt="Norton Charity Chuckers"
+              width={80}
+              height={80}
+              className="rounded-md shadow-lg"
+            />
+          </div>
         </div>
       </header>
 
+      <div className="md:hidden absolute top-4 right-4">
+        <Image
+          src="/norton-charity-chuckers.png"
+          alt="Norton Charity Chuckers"
+          width={70}
+          height={70}
+          className="rounded-md shadow-lg"
+        />
+      </div>
+
       {!game.startedAt && (
-        <div className="mb-8 p-4 bg-amber-500/20 rounded-lg border border-amber-500/40">
-          <p className="text-amber-200 mb-3">The 12-hour timer has not started yet.</p>
+        <div className="mb-8 p-4 bg-[#00A651]/15 rounded-lg border border-[#8FE6B0]">
+          <p className="text-[#E6F5EC] mb-3">
+            The 12-hour timer has not started yet.
+          </p>
           <button
             onClick={handleStart}
-            className="px-4 py-2 bg-amber-500 text-slate-950 font-semibold rounded-lg hover:bg-amber-400"
+            className="px-4 py-2 bg-[#00A651] text-[#01210F] font-semibold rounded-full hover:bg-[#00c765]"
           >
             Start timer
           </button>
@@ -182,14 +211,19 @@ export default function ScorerPage() {
       )}
 
       <section className="mb-8">
-        <h2 className="text-lg font-semibold text-slate-300 mb-4">Add score</h2>
-        <form onSubmit={handleAddScore} className="flex flex-wrap gap-4 items-end">
+        <h2 className="text-lg font-semibold text-[#E6F5EC] mb-4">
+          Add score
+        </h2>
+        <form
+          onSubmit={handleAddScore}
+          className="flex flex-wrap gap-4 items-end bg-[#002B18]/70 border border-[#09673B] rounded-xl p-4"
+        >
           <div>
-            <label className="block text-sm text-slate-500 mb-1">Team</label>
+            <label className="block text-sm text-[#C0E8D5] mb-1">Team</label>
             <select
               value={selectedTeam}
               onChange={(e) => setSelectedTeam(e.target.value)}
-              className="px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white"
+              className="px-4 py-3 bg-[#01210F] border border-[#09673B] rounded-lg text-white"
             >
               {game.teams.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -199,7 +233,9 @@ export default function ScorerPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm text-slate-500 mb-1">Score (0–180)</label>
+            <label className="block text-sm text-[#C0E8D5] mb-1">
+              Score (0–180)
+            </label>
             <input
               type="number"
               min={0}
@@ -207,50 +243,55 @@ export default function ScorerPage() {
               value={scoreInput}
               onChange={(e) => setScoreInput(e.target.value)}
               placeholder="e.g. 60"
-              className="px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white w-28"
+              className="px-4 py-3 bg-[#01210F] border border-[#09673B] rounded-lg text-white w-28"
             />
           </div>
           <button
             type="submit"
-            className="px-6 py-3 bg-amber-500 text-slate-950 font-semibold rounded-lg hover:bg-amber-400"
+            className="px-6 py-3 bg-[#00A651] text-[#01210F] font-semibold rounded-full hover:bg-[#00c765]"
           >
             Add
           </button>
         </form>
         {status === "success" && (
-          <p className="text-green-400 mt-2 text-sm">Score added.</p>
+          <p className="text-[#8FE6B0] mt-2 text-sm">Score added.</p>
         )}
         {status === "error" && (
-          <p className="text-red-400 mt-2 text-sm">
+          <p className="text-red-300 mt-2 text-sm">
             Invalid score (0–180) or database error. Check console for details.
           </p>
         )}
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold text-slate-300 mb-4">Current totals</h2>
+        <h2 className="text-lg font-semibold text-[#E6F5EC] mb-4">
+          Current totals
+        </h2>
         <div className="grid grid-cols-2 gap-4">
           {game.teams.map((t) => (
             <div
               key={t.id}
-              className="p-4 bg-slate-900 rounded-lg border border-slate-800"
+              className="p-4 bg-[#002B18] rounded-lg border border-[#09673B]"
             >
-              <p className="text-slate-400 text-sm">{t.name}</p>
-              <p className="text-3xl font-bold text-amber-400 font-mono">
+              <p className="text-[#C0E8D5] text-sm">{t.name}</p>
+              <p className="text-3xl font-bold text-[#8FE6B0] font-mono">
                 {t.remainingPoints.toLocaleString()}
               </p>
-              <p className="text-slate-500 text-sm mt-2">
-                3-dart avg: <span className="text-slate-300 font-semibold">{t.threeDartAverage?.toFixed(1) || "0.0"}</span>
+              <p className="text-[#C0E8D5] text-sm mt-2">
+                3-dart avg:{" "}
+                <span className="text-white font-semibold">
+                  {t.threeDartAverage?.toFixed(1) || "0.0"}
+                </span>
               </p>
             </div>
           ))}
         </div>
       </section>
 
-      <div className="mt-12 pt-8 border-t border-slate-800">
+      <div className="mt-12 pt-8 border-t border-[#09673B]">
         <button
           onClick={handleReset}
-          className="text-slate-500 hover:text-red-400 text-sm"
+          className="text-[#C0E8D5] hover:text-red-300 text-sm"
         >
           Reset game
         </button>

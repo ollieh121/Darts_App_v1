@@ -51,20 +51,11 @@ export async function GET() {
         return;
       }
 
-      // Group into rounds of 3
-      const rounds: number[][] = [];
-      for (let i = 0; i < teamScores.length; i += 3) {
-        rounds.push(teamScores.slice(i, i + 3));
-      }
-
-      // Calculate average of all rounds (sum of round totals / number of rounds)
-      if (rounds.length === 0) {
-        teamAverages[team.id] = 0;
-      } else {
-        const roundTotals = rounds.map(round => round.reduce((a, b) => a + b, 0));
-        const totalScore = roundTotals.reduce((a, b) => a + b, 0);
-        teamAverages[team.id] = Math.round((totalScore / rounds.length) * 10) / 10; // Round to 1 decimal
-      }
+      // Each score represents one 3-dart visit, so the
+      // 3-dart average is simply the mean of all scores.
+      const totalScore = teamScores.reduce((a, b) => a + b, 0);
+      const avg = totalScore / teamScores.length;
+      teamAverages[team.id] = Math.round(avg * 10) / 10; // 1 decimal place
     });
 
     return NextResponse.json({
@@ -113,12 +104,35 @@ export async function POST(request: Request) {
           { status: 500 }
         );
       }
-      await sql`
-        UPDATE game_state 
-        SET started_at = COALESCE(started_at, NOW()), updated_at = NOW() 
-        WHERE id = 'default'
-      `;
-      return NextResponse.json({ success: true });
+      try {
+        // First, ensure the game_state row exists
+        await sql`
+          INSERT INTO game_state (id, started_at) 
+          VALUES ('default', NOW()) 
+          ON CONFLICT (id) 
+          DO UPDATE SET started_at = COALESCE(game_state.started_at, NOW()), updated_at = NOW()
+        `;
+        return NextResponse.json({ success: true });
+      } catch (dbError: any) {
+        console.error("Database error starting timer:", dbError);
+        const errorMessage = dbError?.message || "Unknown database error";
+        if (errorMessage.includes("does not exist") || errorMessage.includes("relation")) {
+          return NextResponse.json(
+            { 
+              error: "Database tables not found. Please run the SQL schema from lib/schema.sql in your Neon dashboard.",
+              details: errorMessage
+            },
+            { status: 500 }
+          );
+        }
+        return NextResponse.json(
+          { 
+            error: `Database error: ${errorMessage}`,
+            details: errorMessage
+          },
+          { status: 500 }
+        );
+      }
     }
 
     if (action === "reset") {
@@ -129,10 +143,14 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Game update error:", error);
+    const errorMessage = error?.message || "Unknown error";
     return NextResponse.json(
-      { error: "Failed to update game" },
+      { 
+        error: `Failed to update game: ${errorMessage}`,
+        details: errorMessage
+      },
       { status: 500 }
     );
   }
