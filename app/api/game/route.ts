@@ -13,8 +13,8 @@ export async function GET() {
           remainingMs: CHALLENGE_DURATION_MS,
           isRunning: false,
           teams: [
-            { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0 },
-            { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0 },
+            { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100: 0, count140: 0, count180: 0 },
+            { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100: 0, count140: 0, count180: 0 },
           ],
         },
         { status: 200 }
@@ -39,23 +39,30 @@ export async function GET() {
     const remainingMs = Math.max(0, CHALLENGE_DURATION_MS - elapsed);
     const isRunning = startedAt !== null && remainingMs > 0;
 
-    // Calculate 3-dart averages per team
+    // Per-team: 3-dart average, last 3 scores, and 100/140/180 counts
     const teamAverages: Record<string, number> = {};
+    const teamLast3: Record<string, number[]> = {};
+    const teamCount100: Record<string, number> = {};
+    const teamCount140: Record<string, number> = {};
+    const teamCount180: Record<string, number> = {};
+
     teams.forEach((team: any) => {
       const teamScores = allScores
         .filter((s: any) => s.team_id === team.id)
         .map((s: any) => Number(s.score));
-      
+
+      teamLast3[team.id] = teamScores.slice(-3).reverse();
+      teamCount100[team.id] = teamScores.filter((x) => x === 100).length;
+      teamCount140[team.id] = teamScores.filter((x) => x === 140).length;
+      teamCount180[team.id] = teamScores.filter((x) => x === 180).length;
+
       if (teamScores.length === 0) {
         teamAverages[team.id] = 0;
         return;
       }
-
-      // Each score represents one 3-dart visit, so the
-      // 3-dart average is simply the mean of all scores.
       const totalScore = teamScores.reduce((a, b) => a + b, 0);
       const avg = totalScore / teamScores.length;
-      teamAverages[team.id] = Math.round(avg * 10) / 10; // 1 decimal place
+      teamAverages[team.id] = Math.round(avg * 10) / 10;
     });
 
     return NextResponse.json({
@@ -67,6 +74,10 @@ export async function GET() {
         name: t.name,
         remainingPoints: Number(t.remaining_points),
         threeDartAverage: teamAverages[t.id] || 0,
+        last3Scores: teamLast3[t.id] || [],
+        count100: teamCount100[t.id] || 0,
+        count140: teamCount140[t.id] || 0,
+        count180: teamCount180[t.id] || 0,
       })),
     });
   } catch (error) {
@@ -78,8 +89,8 @@ export async function GET() {
         remainingMs: CHALLENGE_DURATION_MS,
         isRunning: false,
         teams: [
-          { id: "team1", name: "Team 1", remainingPoints: 100000 },
-          { id: "team2", name: "Team 2", remainingPoints: 100000 },
+          { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100: 0, count140: 0, count180: 0 },
+          { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100: 0, count140: 0, count180: 0 },
         ],
       },
       { status: 200 }

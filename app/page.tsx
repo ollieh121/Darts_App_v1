@@ -17,7 +17,7 @@ export default function HomePage() {
           href="/display"
           className="px-8 py-4 rounded-full bg-[#00A651] text-[#01210F] font-semibold shadow-lg hover:bg-[#00c765] transition-colors"
         >
-          View Display
+          Live Score Update
         </Link>
         <Link
           href="/scorer"

@@ -8,6 +8,10 @@ interface Team {
   name: string;
   remainingPoints: number;
   threeDartAverage?: number;
+  last3Scores?: number[];
+  count100?: number;
+  count140?: number;
+  count180?: number;
 }
 
 interface GameState {
@@ -47,8 +51,8 @@ export default function DisplayPage() {
           remainingMs: 12 * 60 * 60 * 1000,
           isRunning: false,
           teams: [
-            { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0 },
-            { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0 },
+            { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100: 0, count140: 0, count180: 0 },
+            { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100: 0, count140: 0, count180: 0 },
           ],
         });
       }
@@ -88,17 +92,28 @@ export default function DisplayPage() {
   return (
     <main className="relative min-h-screen p-6 md:p-10">
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
-        <div className="space-y-3 max-w-xl">
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white">
-            100K Darts Challenge
-          </h1>
-          <p className="text-lg md:text-xl text-[#E6F5EC]">
-            Getting men talking about cancer, one dart a time.
-          </p>
+        <div className="flex items-center gap-4 md:gap-6">
+          <div className="flex-shrink-0">
+            <Image
+              src="/mac-electrical.png"
+              alt="Mac Electrical"
+              width={100}
+              height={60}
+              className="object-contain h-12 md:h-14 w-auto"
+            />
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-white">
+              Live Score Update
+            </h1>
+            <p className="text-base md:text-lg text-[#E6F5EC]">
+              Getting men talking about cancer, one dart a time.
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 md:gap-6">
           <div
-            className={`text-4xl md:text-6xl font-mono font-bold tabular-nums px-4 py-2 rounded-lg bg-[#01210F]/70 ${
+            className={`text-3xl md:text-5xl font-mono font-bold tabular-nums px-4 py-2 rounded-lg bg-[#01210F]/70 ${
               game.isRunning ? "text-[#8FE6B0]" : "text-[#6FBF8E]"
             }`}
           >
@@ -108,9 +123,9 @@ export default function DisplayPage() {
             <Image
               src="/norton-charity-chuckers.png"
               alt="Norton Charity Chuckers"
-              width={120}
-              height={120}
-              className="rounded-md shadow-lg"
+              width={100}
+              height={100}
+              className="rounded-md shadow-lg object-contain"
             />
           </div>
         </div>
@@ -120,9 +135,9 @@ export default function DisplayPage() {
         <Image
           src="/norton-charity-chuckers.png"
           alt="Norton Charity Chuckers"
-          width={80}
-          height={80}
-          className="rounded-md shadow-lg"
+          width={64}
+          height={64}
+          className="rounded-md shadow-lg object-contain"
         />
       </div>
 
@@ -147,6 +162,25 @@ export default function DisplayPage() {
                 {team.threeDartAverage?.toFixed(1) || "0.0"}
               </span>
             </p>
+            <div className="mt-4 pt-4 border-t border-[#09673B]">
+              <p className="text-[#C0E8D5] text-sm mb-1">Last 3 scores</p>
+              <p className="text-[#E6F5EC] font-mono text-lg">
+                {team.last3Scores?.length
+                  ? team.last3Scores.join(" → ")
+                  : "—"}
+              </p>
+            </div>
+            <div className="mt-3 flex gap-4 text-[#E6F5EC]">
+              <span className="bg-[#01210F] px-3 py-1 rounded">
+                100: <strong className="text-[#8FE6B0]">{team.count100 ?? 0}</strong>
+              </span>
+              <span className="bg-[#01210F] px-3 py-1 rounded">
+                140: <strong className="text-[#8FE6B0]">{team.count140 ?? 0}</strong>
+              </span>
+              <span className="bg-[#01210F] px-3 py-1 rounded">
+                180: <strong className="text-[#8FE6B0]">{team.count180 ?? 0}</strong>
+              </span>
+            </div>
           </section>
         ))}
       </div>
