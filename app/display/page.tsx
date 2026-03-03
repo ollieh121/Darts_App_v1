@@ -139,20 +139,20 @@ export default function DisplayPage() {
               className="object-contain h-12 md:h-14 w-auto"
             />
           </div>
-          {process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL && (
+          {(process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL || "/mcmillan-logo.png") && (
             <div className="flex-shrink-0 hidden sm:block">
-              {process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL.startsWith("http") ? (
+              {(process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL || "/mcmillan-logo.png").startsWith("http") ? (
                 <img
                   src={process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL}
-                  alt="McMillan"
+                  alt="Macmillan Cancer Support"
                   width={80}
                   height={48}
                   className="object-contain h-10 md:h-12 w-auto"
                 />
               ) : (
                 <Image
-                  src={process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL}
-                  alt="McMillan"
+                  src={process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL || "/mcmillan-logo.png"}
+                  alt="Macmillan Cancer Support"
                   width={80}
                   height={48}
                   className="object-contain h-10 md:h-12 w-auto"
@@ -190,19 +190,19 @@ export default function DisplayPage() {
       </header>
 
       <div className="md:hidden absolute top-4 right-4 flex items-center gap-2">
-        {process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL && (
-          process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL.startsWith("http") ? (
+        {(process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL || "/mcmillan-logo.png") && (
+          (process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL || "/mcmillan-logo.png").startsWith("http") ? (
             <img
               src={process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL}
-              alt="McMillan"
+              alt="Macmillan Cancer Support"
               width={48}
               height={28}
               className="object-contain h-7 w-auto"
             />
           ) : (
             <Image
-              src={process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL}
-              alt="McMillan"
+              src={process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL || "/mcmillan-logo.png"}
+              alt="Macmillan Cancer Support"
               width={48}
               height={28}
               className="object-contain h-7 w-auto"
@@ -257,10 +257,10 @@ export default function DisplayPage() {
             </div>
             <div className="mt-3 flex gap-4 text-[#E6F5EC] flex-wrap">
               <span className="bg-[#01210F] px-3 py-1 rounded">
-                100–139: <strong className="text-[#8FE6B0]">{team.count100to139 ?? 0}</strong>
+                100+: <strong className="text-[#8FE6B0]">{team.count100to139 ?? 0}</strong>
               </span>
               <span className="bg-[#01210F] px-3 py-1 rounded">
-                140–179: <strong className="text-[#8FE6B0]">{team.count140to179 ?? 0}</strong>
+                140+: <strong className="text-[#8FE6B0]">{team.count140to179 ?? 0}</strong>
               </span>
               <span className="bg-[#01210F] px-3 py-1 rounded">
                 180: <strong className="text-[#8FE6B0]">{team.count180 ?? 0}</strong>
@@ -270,11 +270,11 @@ export default function DisplayPage() {
         ))}
       </div>
 
-      {process.env.NEXT_PUBLIC_DONATE_URL && (
-        <section className="mt-10 pt-8 border-t border-[#09673B] flex flex-col sm:flex-row items-center justify-center gap-6">
-          <div className="text-center sm:text-left">
-            <p className="text-[#E6F5EC] font-semibold text-lg mb-1">Support the challenge</p>
-            <p className="text-[#C0E8D5] text-sm mb-3">Scan to donate while you watch</p>
+      <section className="mt-10 pt-8 border-t border-[#09673B] flex flex-col sm:flex-row items-center justify-center gap-6">
+        <div className="text-center sm:text-left">
+          <p className="text-[#E6F5EC] font-semibold text-lg mb-1">Support the challenge</p>
+          <p className="text-[#C0E8D5] text-sm mb-3">Scan to donate while you watch</p>
+          {process.env.NEXT_PUBLIC_DONATE_URL ? (
             <a
               href={process.env.NEXT_PUBLIC_DONATE_URL}
               target="_blank"
@@ -283,18 +283,40 @@ export default function DisplayPage() {
             >
               Donate now
             </a>
-          </div>
-          <div className="flex-shrink-0 bg-white p-2 rounded-lg">
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(process.env.NEXT_PUBLIC_DONATE_URL)}`}
-              alt="QR code to donate"
+          ) : (
+            <span className="inline-block px-5 py-2.5 bg-[#09673B] text-[#C0E8D5] font-semibold rounded-full cursor-default">
+              Donate now
+            </span>
+          )}
+        </div>
+        <div className="flex-shrink-0 bg-white p-2 rounded-lg">
+          {process.env.NEXT_PUBLIC_DONATE_URL ? (
+            <a
+              href={process.env.NEXT_PUBLIC_DONATE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+              aria-label="Scan or click to open donation page"
+            >
+              <Image
+                src="/scan-to-donate-qr.png"
+                alt="QR code – scan to donate"
+                width={160}
+                height={160}
+                className="rounded"
+              />
+            </a>
+          ) : (
+            <Image
+              src="/scan-to-donate-qr.png"
+              alt="QR code – scan to donate"
               width={160}
               height={160}
               className="rounded"
             />
-          </div>
-        </section>
-      )}
+          )}
+        </div>
+      </section>
     </main>
   );
 }

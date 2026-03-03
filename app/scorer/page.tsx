@@ -390,10 +390,10 @@ export default function ScorerPage() {
               </p>
               <div className="mt-2 flex gap-2 flex-wrap">
                 <span className="bg-[#01210F] px-2 py-0.5 rounded text-xs text-[#E6F5EC]">
-                  100–139: <strong className="text-[#8FE6B0]">{t.count100to139 ?? 0}</strong>
+                  100+: <strong className="text-[#8FE6B0]">{t.count100to139 ?? 0}</strong>
                 </span>
                 <span className="bg-[#01210F] px-2 py-0.5 rounded text-xs text-[#E6F5EC]">
-                  140–179: <strong className="text-[#8FE6B0]">{t.count140to179 ?? 0}</strong>
+                  140+: <strong className="text-[#8FE6B0]">{t.count140to179 ?? 0}</strong>
                 </span>
                 <span className="bg-[#01210F] px-2 py-0.5 rounded text-xs text-[#E6F5EC]">
                   180: <strong className="text-[#8FE6B0]">{t.count180 ?? 0}</strong>
