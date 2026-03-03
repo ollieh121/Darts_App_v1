@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Team {
   id: string;
@@ -9,9 +9,10 @@ interface Team {
   remainingPoints: number;
   threeDartAverage?: number;
   last3Scores?: number[];
-  count100?: number;
-  count140?: number;
+  count100to139?: number;
+  count140to179?: number;
   count180?: number;
+  estimatedMinutesRemaining?: number | null;
 }
 
 interface GameState {
@@ -30,9 +31,29 @@ function formatTime(ms: number) {
     .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
+function speakScore(teamName: string, score: number) {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance();
+  u.text =
+    score === 180
+      ? `One hundred and eighty! ${teamName}`
+      : score >= 140
+        ? `${score}. ${teamName}`
+        : `${score}. ${teamName}`;
+  u.rate = score >= 140 ? 0.9 : 0.95;
+  u.pitch = score === 180 ? 1.15 : 1;
+  u.volume = 1;
+  const voice = window.speechSynthesis.getVoices().find((v) => v.lang.startsWith("en"));
+  if (voice) u.voice = voice;
+  window.speechSynthesis.speak(u);
+}
+
 export default function DisplayPage() {
   const [game, setGame] = useState<GameState | null>(null);
   const [timeDisplay, setTimeDisplay] = useState("12:00:00");
+  const lastAnnouncedRef = useRef<Record<string, number>>({});
+  const initialLoadRef = useRef(true);
 
   useEffect(() => {
     const fetchGame = async () => {
@@ -51,8 +72,8 @@ export default function DisplayPage() {
           remainingMs: 12 * 60 * 60 * 1000,
           isRunning: false,
           teams: [
-            { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100: 0, count140: 0, count180: 0 },
-            { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100: 0, count140: 0, count180: 0 },
+            { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100to139: 0, count140to179: 0, count180: 0, estimatedMinutesRemaining: null },
+            { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100to139: 0, count140to179: 0, count180: 0, estimatedMinutesRemaining: null },
           ],
         });
       }
@@ -81,6 +102,22 @@ export default function DisplayPage() {
     if (game) setTimeDisplay(formatTime(game.remainingMs));
   }, [game?.remainingMs]);
 
+  // Optional: announce latest score per team when it changes (browser TTS; set NEXT_PUBLIC_ANNOUNCE_SCORES=1 to enable)
+  useEffect(() => {
+    if (!game || !process.env.NEXT_PUBLIC_ANNOUNCE_SCORES) return;
+    game.teams.forEach((team) => {
+      const latest = team.last3Scores?.[0];
+      if (latest == null) return;
+      const prev = lastAnnouncedRef.current[team.id];
+      if (prev !== latest) {
+        lastAnnouncedRef.current[team.id] = latest;
+        // Only speak when we had a previous value (avoids announcing on first load)
+        if (prev !== undefined) speakScore(team.name, latest);
+      }
+    });
+    initialLoadRef.current = false;
+  }, [game?.teams]);
+
   if (!game) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -102,6 +139,27 @@ export default function DisplayPage() {
               className="object-contain h-12 md:h-14 w-auto"
             />
           </div>
+          {process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL && (
+            <div className="flex-shrink-0 hidden sm:block">
+              {process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL.startsWith("http") ? (
+                <img
+                  src={process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL}
+                  alt="McMillan"
+                  width={80}
+                  height={48}
+                  className="object-contain h-10 md:h-12 w-auto"
+                />
+              ) : (
+                <Image
+                  src={process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL}
+                  alt="McMillan"
+                  width={80}
+                  height={48}
+                  className="object-contain h-10 md:h-12 w-auto"
+                />
+              )}
+            </div>
+          )}
           <div className="space-y-1">
             <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-white">
               Live Score Update
@@ -131,7 +189,26 @@ export default function DisplayPage() {
         </div>
       </header>
 
-      <div className="md:hidden absolute top-4 right-4">
+      <div className="md:hidden absolute top-4 right-4 flex items-center gap-2">
+        {process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL && (
+          process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL.startsWith("http") ? (
+            <img
+              src={process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL}
+              alt="McMillan"
+              width={48}
+              height={28}
+              className="object-contain h-7 w-auto"
+            />
+          ) : (
+            <Image
+              src={process.env.NEXT_PUBLIC_MCMILLAN_LOGO_URL}
+              alt="McMillan"
+              width={48}
+              height={28}
+              className="object-contain h-7 w-auto"
+            />
+          )
+        )}
         <Image
           src="/norton-charity-chuckers.png"
           alt="Norton Charity Chuckers"
@@ -162,6 +239,14 @@ export default function DisplayPage() {
                 {team.threeDartAverage?.toFixed(1) || "0.0"}
               </span>
             </p>
+            {team.estimatedMinutesRemaining != null && team.estimatedMinutesRemaining > 0 && (
+              <p className="text-[#C0E8D5] mt-1 text-sm">
+                Est. finish:{" "}
+                <span className="text-[#8FE6B0] font-semibold">
+                  {Math.round(team.estimatedMinutesRemaining)} min
+                </span>
+              </p>
+            )}
             <div className="mt-4 pt-4 border-t border-[#09673B]">
               <p className="text-[#C0E8D5] text-sm mb-1">Last 3 scores</p>
               <p className="text-[#E6F5EC] font-mono text-lg">
@@ -170,12 +255,12 @@ export default function DisplayPage() {
                   : "—"}
               </p>
             </div>
-            <div className="mt-3 flex gap-4 text-[#E6F5EC]">
+            <div className="mt-3 flex gap-4 text-[#E6F5EC] flex-wrap">
               <span className="bg-[#01210F] px-3 py-1 rounded">
-                100: <strong className="text-[#8FE6B0]">{team.count100 ?? 0}</strong>
+                100–139: <strong className="text-[#8FE6B0]">{team.count100to139 ?? 0}</strong>
               </span>
               <span className="bg-[#01210F] px-3 py-1 rounded">
-                140: <strong className="text-[#8FE6B0]">{team.count140 ?? 0}</strong>
+                140–179: <strong className="text-[#8FE6B0]">{team.count140to179 ?? 0}</strong>
               </span>
               <span className="bg-[#01210F] px-3 py-1 rounded">
                 180: <strong className="text-[#8FE6B0]">{team.count180 ?? 0}</strong>
@@ -184,6 +269,32 @@ export default function DisplayPage() {
           </section>
         ))}
       </div>
+
+      {process.env.NEXT_PUBLIC_DONATE_URL && (
+        <section className="mt-10 pt-8 border-t border-[#09673B] flex flex-col sm:flex-row items-center justify-center gap-6">
+          <div className="text-center sm:text-left">
+            <p className="text-[#E6F5EC] font-semibold text-lg mb-1">Support the challenge</p>
+            <p className="text-[#C0E8D5] text-sm mb-3">Scan to donate while you watch</p>
+            <a
+              href={process.env.NEXT_PUBLIC_DONATE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-5 py-2.5 bg-[#00A651] text-white font-semibold rounded-full hover:bg-[#00c765] transition-colors"
+            >
+              Donate now
+            </a>
+          </div>
+          <div className="flex-shrink-0 bg-white p-2 rounded-lg">
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(process.env.NEXT_PUBLIC_DONATE_URL)}`}
+              alt="QR code to donate"
+              width={160}
+              height={160}
+              className="rounded"
+            />
+          </div>
+        </section>
+      )}
     </main>
   );
 }

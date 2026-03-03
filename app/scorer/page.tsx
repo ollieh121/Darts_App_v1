@@ -11,9 +11,10 @@ interface Team {
   remainingPoints: number;
   threeDartAverage?: number;
   last3Scores?: number[];
-  count100?: number;
-  count140?: number;
+  count100to139?: number;
+  count140to179?: number;
   count180?: number;
+  estimatedMinutesRemaining?: number | null;
 }
 
 interface GameState {
@@ -54,8 +55,8 @@ export default function ScorerPage() {
         remainingMs: 12 * 60 * 60 * 1000,
         isRunning: false,
           teams: [
-            { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100: 0, count140: 0, count180: 0 },
-            { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100: 0, count140: 0, count180: 0 },
+            { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100to139: 0, count140to179: 0, count180: 0, estimatedMinutesRemaining: null },
+            { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100to139: 0, count140to179: 0, count180: 0, estimatedMinutesRemaining: null },
           ],
       });
     }
@@ -376,6 +377,11 @@ export default function ScorerPage() {
                   {t.threeDartAverage?.toFixed(1) || "0.0"}
                 </span>
               </p>
+              {t.estimatedMinutesRemaining != null && t.estimatedMinutesRemaining > 0 && (
+                <p className="text-[#C0E8D5] text-xs mt-0.5">
+                  Est. finish: <span className="text-[#8FE6B0] font-semibold">{Math.round(t.estimatedMinutesRemaining)} min</span>
+                </p>
+              )}
               <p className="text-[#C0E8D5] text-sm mt-1">
                 Last 3:{" "}
                 <span className="text-[#E6F5EC] font-mono">
@@ -384,10 +390,10 @@ export default function ScorerPage() {
               </p>
               <div className="mt-2 flex gap-2 flex-wrap">
                 <span className="bg-[#01210F] px-2 py-0.5 rounded text-xs text-[#E6F5EC]">
-                  100: <strong className="text-[#8FE6B0]">{t.count100 ?? 0}</strong>
+                  100–139: <strong className="text-[#8FE6B0]">{t.count100to139 ?? 0}</strong>
                 </span>
                 <span className="bg-[#01210F] px-2 py-0.5 rounded text-xs text-[#E6F5EC]">
-                  140: <strong className="text-[#8FE6B0]">{t.count140 ?? 0}</strong>
+                  140–179: <strong className="text-[#8FE6B0]">{t.count140to179 ?? 0}</strong>
                 </span>
                 <span className="bg-[#01210F] px-2 py-0.5 rounded text-xs text-[#E6F5EC]">
                   180: <strong className="text-[#8FE6B0]">{t.count180 ?? 0}</strong>

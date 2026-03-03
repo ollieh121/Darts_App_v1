@@ -13,8 +13,8 @@ export async function GET() {
           remainingMs: CHALLENGE_DURATION_MS,
           isRunning: false,
           teams: [
-            { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100: 0, count140: 0, count180: 0 },
-            { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100: 0, count140: 0, count180: 0 },
+            { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100to139: 0, count140to179: 0, count180: 0, estimatedMinutesRemaining: null },
+            { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100to139: 0, count140to179: 0, count180: 0, estimatedMinutesRemaining: null },
           ],
         },
         { status: 200 }
@@ -39,12 +39,17 @@ export async function GET() {
     const remainingMs = Math.max(0, CHALLENGE_DURATION_MS - elapsed);
     const isRunning = startedAt !== null && remainingMs > 0;
 
-    // Per-team: 3-dart average, last 3 scores, and 100/140/180 counts
+    // Per-team: 3-dart average, last 3 scores, and score band counts (100-139, 140-179, 180)
     const teamAverages: Record<string, number> = {};
     const teamLast3: Record<string, number[]> = {};
-    const teamCount100: Record<string, number> = {};
-    const teamCount140: Record<string, number> = {};
+    const teamCount100to139: Record<string, number> = {};
+    const teamCount140to179: Record<string, number> = {};
     const teamCount180: Record<string, number> = {};
+    const teamScoreCount: Record<string, number> = {};
+
+    const totalScores = allScores.length;
+    const elapsedMinutes = startedAt ? (now - startedAt) / (1000 * 60) : 0;
+    const visitsPerMinute = elapsedMinutes > 0 ? totalScores / elapsedMinutes : 0;
 
     teams.forEach((team: any) => {
       const teamScores = allScores
@@ -52,8 +57,9 @@ export async function GET() {
         .map((s: any) => Number(s.score));
 
       teamLast3[team.id] = teamScores.slice(-3).reverse();
-      teamCount100[team.id] = teamScores.filter((x) => x === 100).length;
-      teamCount140[team.id] = teamScores.filter((x) => x === 140).length;
+      teamScoreCount[team.id] = teamScores.length;
+      teamCount100to139[team.id] = teamScores.filter((x) => x >= 100 && x <= 139).length;
+      teamCount140to179[team.id] = teamScores.filter((x) => x >= 140 && x <= 179).length;
       teamCount180[team.id] = teamScores.filter((x) => x === 180).length;
 
       if (teamScores.length === 0) {
@@ -69,16 +75,28 @@ export async function GET() {
       startedAt: startedAt ? new Date(startedAt).toISOString() : null,
       remainingMs,
       isRunning,
-      teams: teams.map((t: any) => ({
-        id: t.id,
-        name: t.name,
-        remainingPoints: Number(t.remaining_points),
-        threeDartAverage: teamAverages[t.id] || 0,
-        last3Scores: teamLast3[t.id] || [],
-        count100: teamCount100[t.id] || 0,
-        count140: teamCount140[t.id] || 0,
-        count180: teamCount180[t.id] || 0,
-      })),
+      elapsedMinutes,
+      visitsPerMinute,
+      teams: teams.map((t: any) => {
+        const avg = teamAverages[t.id] || 0;
+        const remaining = Number(t.remaining_points);
+        const visits = teamScoreCount[t.id] || 0;
+        const teamVisitsPerMin = elapsedMinutes > 0 ? visits / elapsedMinutes : 0;
+        const remainingVisits = avg > 0 ? remaining / avg : 0;
+        const estimatedMinutesRemaining =
+          teamVisitsPerMin > 0 ? remainingVisits / teamVisitsPerMin : null;
+        return {
+          id: t.id,
+          name: t.name,
+          remainingPoints: remaining,
+          threeDartAverage: avg,
+          last3Scores: teamLast3[t.id] || [],
+          count100to139: teamCount100to139[t.id] || 0,
+          count140to179: teamCount140to179[t.id] || 0,
+          count180: teamCount180[t.id] || 0,
+          estimatedMinutesRemaining,
+        };
+      }),
     });
   } catch (error) {
     console.error("Game state fetch error:", error);
@@ -89,8 +107,8 @@ export async function GET() {
         remainingMs: CHALLENGE_DURATION_MS,
         isRunning: false,
         teams: [
-          { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100: 0, count140: 0, count180: 0 },
-          { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100: 0, count140: 0, count180: 0 },
+          { id: "team1", name: "Team 1", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100to139: 0, count140to179: 0, count180: 0, estimatedMinutesRemaining: null },
+          { id: "team2", name: "Team 2", remainingPoints: 100000, threeDartAverage: 0, last3Scores: [], count100to139: 0, count140to179: 0, count180: 0, estimatedMinutesRemaining: null },
         ],
       },
       { status: 200 }
