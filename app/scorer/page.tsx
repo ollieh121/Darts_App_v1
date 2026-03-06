@@ -1,9 +1,10 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Team {
   id: string;
@@ -34,6 +35,8 @@ function formatTime(ms: number) {
 }
 
 export default function ScorerPage() {
+  const { data: session, status: sessionStatus } = useSession();
+  const router = useRouter();
   const [game, setGame] = useState<GameState | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<string>("team1");
   const [scoreInput, setScoreInput] = useState("");
@@ -41,6 +44,13 @@ export default function ScorerPage() {
   const [backupJson, setBackupJson] = useState("");
   const [restoreStatus, setRestoreStatus] = useState<"idle" | "loading" | "ok" | "err">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Force redirect to login if not authenticated (client-side backup)
+  useEffect(() => {
+    if (sessionStatus === "unauthenticated") {
+      router.replace("/login?callbackUrl=/scorer");
+    }
+  }, [sessionStatus, router]);
 
   const fetchGame = async () => {
     try {
@@ -250,6 +260,14 @@ export default function ScorerPage() {
       alert(err instanceof Error ? err.message : "Failed to restore backup.");
       setTimeout(() => setRestoreStatus("idle"), 2000);
     }
+  }
+
+  if (sessionStatus === "loading" || sessionStatus === "unauthenticated") {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <p className="text-xl text-[#C0E8D5]">Checking authentication...</p>
+      </main>
+    );
   }
 
   if (!game) {
