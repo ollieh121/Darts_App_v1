@@ -1,7 +1,8 @@
 import { auth } from "@/auth";
 
 export default auth((req) => {
-  const isLoggedIn = !!req.auth;
+  // Require a valid session with a user (stale/expired JWTs have no user)
+  const isLoggedIn = !!req.auth?.user;
   const isScorerPage = req.nextUrl.pathname.startsWith("/scorer");
 
   if (isScorerPage && !isLoggedIn) {
@@ -14,5 +15,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/scorer/:path*"],
+  matcher: ["/scorer", "/scorer/:path*"],
 };
