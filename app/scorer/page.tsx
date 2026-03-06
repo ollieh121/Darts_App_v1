@@ -40,6 +40,7 @@ export default function ScorerPage() {
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [backupJson, setBackupJson] = useState("");
   const [restoreStatus, setRestoreStatus] = useState<"idle" | "loading" | "ok" | "err">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const fetchGame = async () => {
     try {
@@ -98,8 +99,16 @@ export default function ScorerPage() {
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: "Failed to add score" }));
         setStatus("error");
-        console.error("Score error:", errorData);
-        setTimeout(() => setStatus("idle"), 3000);
+        setErrorMessage(
+          res.status === 401
+            ? "Please log in again."
+            : res.status === 500
+              ? (errorData.error || "").includes("Database")
+                ? "Database error. On Vercel: add DATABASE_URL (Neon) in Project → Settings → Environment Variables, and ensure Neon is not paused."
+                : "Server error. Try again or check database connection."
+              : errorData.error || "Failed to add score"
+        );
+        setTimeout(() => setStatus("idle"), 5000);
         return;
       }
       setScoreInput("");
@@ -109,7 +118,8 @@ export default function ScorerPage() {
     } catch (err) {
       console.error("Score submission error:", err);
       setStatus("error");
-      setTimeout(() => setStatus("idle"), 3000);
+      setErrorMessage("Network or server error. Check Vercel env: DATABASE_URL (Neon) and that Neon is not paused.");
+      setTimeout(() => setStatus("idle"), 5000);
     }
   }
 
@@ -122,37 +132,64 @@ export default function ScorerPage() {
       });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: "Failed to start timer" }));
-        const errorMsg = errorData.error || "Database not connected. Please check your database setup.";
-        const details = errorData.details ? `\n\nDetails: ${errorData.details}` : "";
-        alert(`Failed to start timer: ${errorMsg}${details}`);
+        const errorMsg = errorData.error || "Database not connected.";
+        const hint =
+          res.status === 500 && String(errorMsg).toLowerCase().includes("database")
+            ? "\n\nOn Vercel: add DATABASE_URL in Settings → Environment Variables (from Neon). Ensure Neon is not paused."
+            : "";
+        alert(`Failed to start timer: ${errorMsg}${hint}`);
         return;
       }
       await fetchGame();
     } catch (err) {
       console.error("Failed to start:", err);
-      alert("Failed to start timer. Please check the console for details.");
+      alert("Failed to start timer. Check DATABASE_URL on Vercel and that Neon is not paused.");
     }
   }
 
   async function handleReset() {
     if (!confirm("Reset the entire game? This cannot be undone.")) return;
     try {
-      await fetch("/api/game", {
+      const res = await fetch("/api/game", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "reset" }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const msg = err.error || "Reset failed.";
+        alert(
+          msg +
+            (String(msg).toLowerCase().includes("database")
+              ? " On Vercel: check DATABASE_URL and that Neon is not paused."
+              : "")
+        );
+        return;
+      }
       fetchGame();
     } catch (err) {
       console.error("Failed to reset:", err);
+      alert("Reset failed. Check DATABASE_URL on Vercel and that Neon is not paused.");
     }
   }
 
   async function handleDownloadBackup() {
     try {
       const res = await fetch("/api/backup");
-      if (!res.ok) throw new Error("Export failed");
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 401) {
+          alert("Please log in again, then try downloading the backup.");
+          return;
+        }
+        if (res.status === 503 || (data.error && String(data.error).toLowerCase().includes("database"))) {
+          alert(
+            "Database not connected. On Vercel: go to Project → Settings → Environment Variables and add DATABASE_URL from your Neon project. Ensure the Neon database is not paused (free tier pauses after inactivity)."
+          );
+          return;
+        }
+        throw new Error(data.error || "Export failed");
+      }
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -162,7 +199,9 @@ export default function ScorerPage() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Backup download failed:", err);
-      alert("Failed to download backup. Check you are logged in and the database is connected.");
+      alert(
+        "Failed to download backup. Check you are logged in. If the problem continues, ensure DATABASE_URL is set on Vercel and your Neon database is not paused."
+      );
     }
   }
 
@@ -260,7 +299,7 @@ export default function ScorerPage() {
             Live score
           </Link>
           <button
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={() => signOut({ callbackUrl: "/login" })}
             className="text-[#C0E8D5] hover:text-white text-sm"
           >
             Sign out
@@ -418,8 +457,8 @@ export default function ScorerPage() {
           <p className="text-[#8FE6B0] mt-2 text-sm">Score added.</p>
         )}
         {status === "error" && (
-          <p className="text-red-300 mt-2 text-sm">
-            Invalid score (0–180) or database error.
+          <p className="text-red-300 mt-2 text-sm max-w-md">
+            {errorMessage || "Invalid score (0–180) or database error."}
           </p>
         )}
       </section>

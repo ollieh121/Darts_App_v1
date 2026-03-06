@@ -1,7 +1,7 @@
 "use client";
 
-import { signIn } from "next-auth/react";
-import { useState, Suspense } from "react";
+import { signIn, signOut } from "next-auth/react";
+import { useState, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
 function LoginForm() {
@@ -9,8 +9,14 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/scorer";
+
+  // Clear any existing session when landing on login so the form is always shown
+  useEffect(() => {
+    signOut({ redirect: false }).finally(() => setReady(true));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,6 +51,14 @@ function LoginForm() {
       setError("Something went wrong. Please try again.");
       setLoading(false);
     }
+  }
+
+  if (!ready) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-6">
+        <p className="text-slate-500">Loading...</p>
+      </main>
+    );
   }
 
   return (

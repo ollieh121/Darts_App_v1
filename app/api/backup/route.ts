@@ -41,10 +41,11 @@ export async function GET() {
     };
 
     return NextResponse.json(backup);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Backup export error:", error);
+    const message = error instanceof Error ? error.message : "Connection or query failed";
     return NextResponse.json(
-      { error: "Failed to export backup" },
+      { error: `Database error: ${message}` },
       { status: 500 }
     );
   }
