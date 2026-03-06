@@ -38,6 +38,8 @@ export default function ScorerPage() {
   const [selectedTeam, setSelectedTeam] = useState<string>("team1");
   const [scoreInput, setScoreInput] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [backupJson, setBackupJson] = useState("");
+  const [restoreStatus, setRestoreStatus] = useState<"idle" | "loading" | "ok" | "err">("idle");
 
   const fetchGame = async () => {
     try {
@@ -143,6 +145,71 @@ export default function ScorerPage() {
       fetchGame();
     } catch (err) {
       console.error("Failed to reset:", err);
+    }
+  }
+
+  async function handleDownloadBackup() {
+    try {
+      const res = await fetch("/api/backup");
+      if (!res.ok) throw new Error("Export failed");
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `darts-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Backup download failed:", err);
+      alert("Failed to download backup. Check you are logged in and the database is connected.");
+    }
+  }
+
+  async function handleRestore() {
+    const raw = backupJson.trim();
+    if (!raw) {
+      setRestoreStatus("err");
+      return;
+    }
+    let data: unknown;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      setRestoreStatus("err");
+      alert("Invalid JSON. Paste the contents of a backup file.");
+      return;
+    }
+    const body = data as { game_state?: unknown; teams?: unknown[]; scores?: unknown[] };
+    if (!body.teams || !Array.isArray(body.teams)) {
+      setRestoreStatus("err");
+      alert("Invalid backup: must contain a 'teams' array.");
+      return;
+    }
+    if (!confirm("Restore will overwrite current game state. Continue?")) return;
+    setRestoreStatus("loading");
+    try {
+      const res = await fetch("/api/backup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          game_state: body.game_state ?? null,
+          teams: body.teams,
+          scores: body.scores ?? [],
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Restore failed");
+      }
+      setRestoreStatus("ok");
+      setBackupJson("");
+      await fetchGame();
+      setTimeout(() => setRestoreStatus("idle"), 2000);
+    } catch (err: unknown) {
+      setRestoreStatus("err");
+      alert(err instanceof Error ? err.message : "Failed to restore backup.");
+      setTimeout(() => setRestoreStatus("idle"), 2000);
     }
   }
 
@@ -404,7 +471,40 @@ export default function ScorerPage() {
         </div>
       </section>
 
-      <div className="mt-12 pt-8 border-t border-[#09673B]">
+      <div className="mt-12 pt-8 border-t border-[#09673B] space-y-4">
+        <div>
+          <p className="text-[#C0E8D5] text-sm font-medium mb-2">Backup &amp; restore</p>
+          <p className="text-[#C0E8D5] text-xs mb-2">
+            Download a backup so you can restore quickly if the database has issues.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleDownloadBackup}
+              className="px-3 py-1.5 bg-[#09673B] text-[#E6F5EC] text-sm rounded-lg hover:bg-[#0a7a45]"
+            >
+              Download backup
+            </button>
+          </div>
+          <div className="mt-3">
+            <label className="block text-[#C0E8D5] text-xs mb-1">Restore from backup (paste JSON)</label>
+            <textarea
+              value={backupJson}
+              onChange={(e) => setBackupJson(e.target.value)}
+              placeholder='Paste backup JSON here...'
+              rows={3}
+              className="w-full max-w-md px-3 py-2 bg-[#01210F] border border-[#09673B] rounded-lg text-[#E6F5EC] text-sm font-mono placeholder-[#6FBF8E]/50"
+            />
+            <button
+              type="button"
+              onClick={handleRestore}
+              disabled={restoreStatus === "loading"}
+              className="mt-1 px-3 py-1.5 bg-[#00A651] text-white text-sm rounded-lg hover:bg-[#00c765] disabled:opacity-50"
+            >
+              {restoreStatus === "loading" ? "Restoring..." : restoreStatus === "ok" ? "Restored" : "Restore from backup"}
+            </button>
+          </div>
+        </div>
         <button
           onClick={handleReset}
           className="text-[#C0E8D5] hover:text-red-300 text-sm"

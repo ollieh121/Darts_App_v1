@@ -3,6 +3,12 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
+interface SupportMessage {
+  id: number;
+  message: string;
+  created_at: string;
+}
+
 interface Team {
   id: string;
   name: string;
@@ -49,9 +55,110 @@ function speakScore(teamName: string, score: number) {
   window.speechSynthesis.speak(u);
 }
 
+function SupportMessagesSection({
+  messages,
+  onNewMessage,
+}: {
+  messages: SupportMessage[];
+  onNewMessage: () => void;
+}) {
+  const [newMessage, setNewMessage] = useState("");
+  const [sending, setSending] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const msg = newMessage.trim();
+    if (!msg || sending) return;
+    setSending(true);
+    try {
+      const res = await fetch("/api/support-messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg }),
+      });
+      if (res.ok) {
+        setNewMessage("");
+        onNewMessage();
+      }
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <section className="mt-10 pt-8 border-t border-[#09673B]">
+      <h3 className="text-[#E6F5EC] font-semibold text-lg mb-3">Supportive messages</h3>
+      <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
+        <input
+          type="text"
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value.slice(0, 500))}
+          placeholder="Add a message of support..."
+          maxLength={500}
+          className="flex-1 px-4 py-2 bg-[#01210F] border border-[#09673B] rounded-lg text-white placeholder-[#6FBF8E]/60"
+        />
+        <button
+          type="submit"
+          disabled={!newMessage.trim() || sending}
+          className="px-4 py-2 bg-[#00A651] text-white font-semibold rounded-lg hover:bg-[#00c765] disabled:opacity-50"
+        >
+          {sending ? "Sending..." : "Send"}
+        </button>
+      </form>
+      <div className="max-h-40 overflow-y-auto space-y-2">
+        {messages.length === 0 && (
+          <p className="text-[#C0E8D5] text-sm">No messages yet. Be the first!</p>
+        )}
+        {messages.map((m) => (
+          <div
+            key={m.id}
+            className="py-2 px-3 bg-[#01210F]/80 rounded-lg text-[#E6F5EC] text-sm"
+          >
+            {m.message}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Confetti() {
+  const pieces = Array.from({ length: 80 }, (_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    delay: Math.random() * 2,
+    duration: 2 + Math.random() * 2,
+    color: ["#8FE6B0", "#00A651", "#E6F5EC", "#FFD700", "#FF6B6B", "#4ECDC4"][Math.floor(Math.random() * 6)],
+    size: 6 + Math.random() * 8,
+    rotation: Math.random() * 360,
+  }));
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
+      {pieces.map((p) => (
+        <div
+          key={p.id}
+          className="absolute rounded-sm animate-confetti-fall"
+          style={{
+            left: `${p.left}%`,
+            top: "-20px",
+            width: p.size,
+            height: p.size,
+            backgroundColor: p.color,
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.duration}s`,
+            transform: `rotate(${p.rotation}deg)`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function DisplayPage() {
   const [game, setGame] = useState<GameState | null>(null);
   const [timeDisplay, setTimeDisplay] = useState("12:00:00");
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
+  const [showCelebration, setShowCelebration] = useState(false);
   const lastAnnouncedRef = useRef<Record<string, number>>({});
   const initialLoadRef = useRef(true);
 
@@ -101,6 +208,30 @@ export default function DisplayPage() {
   useEffect(() => {
     if (game) setTimeDisplay(formatTime(game.remainingMs));
   }, [game?.remainingMs]);
+
+  useEffect(() => {
+    const bothComplete =
+      game?.teams?.length === 2 &&
+      game.teams.every((t) => t.remainingPoints <= 0);
+    if (bothComplete) setShowCelebration(true);
+  }, [game?.teams]);
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const res = await fetch("/api/support-messages");
+        if (res.ok) {
+          const data = await res.json();
+          setSupportMessages(data);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Optional: announce latest score per team when it changes (browser TTS; set NEXT_PUBLIC_ANNOUNCE_SCORES=1 to enable)
   useEffect(() => {
@@ -273,7 +404,10 @@ export default function DisplayPage() {
       <section className="mt-10 pt-8 border-t border-[#09673B] flex flex-col sm:flex-row items-center justify-center gap-6">
         <div className="text-center sm:text-left">
           <p className="text-[#E6F5EC] font-semibold text-lg mb-1">Support the challenge</p>
-          <p className="text-[#C0E8D5] text-sm mb-3">Scan to donate while you watch</p>
+          <p className="text-[#C0E8D5] text-sm mb-2">Scan to donate while you watch</p>
+          <p className="text-[#E6F5EC] text-sm mb-3 max-w-sm">
+            Thank you for donating. If you haven’t yet, any contributions would be greatly appreciated.
+          </p>
           {process.env.NEXT_PUBLIC_DONATE_URL ? (
             <a
               href={process.env.NEXT_PUBLIC_DONATE_URL}
@@ -317,6 +451,61 @@ export default function DisplayPage() {
           )}
         </div>
       </section>
+
+      <SupportMessagesSection
+        messages={supportMessages}
+        onNewMessage={() => {
+          fetch("/api/support-messages")
+            .then((r) => r.ok && r.json())
+            .then((data) => data && setSupportMessages(data))
+            .catch(() => {});
+        }}
+      />
+
+      <section className="mt-10 pt-8 border-t border-[#09673B] text-center">
+        <p className="text-[#E6F5EC] font-semibold text-lg mb-4">
+          Huge thank you to our sponsors Bully Darts and Mac Electrical — fantastic local, family-run businesses and services.
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+          <Image
+            src="/bully-darts.png"
+            alt="Bully Darts"
+            width={140}
+            height={56}
+            className="object-contain h-12 md:h-14 w-auto"
+          />
+          <Image
+            src="/mac-electrical.png"
+            alt="Mac Electrical"
+            width={120}
+            height={72}
+            className="object-contain h-12 md:h-14 w-auto"
+          />
+        </div>
+      </section>
+
+      {showCelebration && (
+        <>
+          <Confetti />
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-6">
+            <div className="bg-[#002B18] border-2 border-[#00A651] rounded-2xl p-8 md:p-12 max-w-lg text-center shadow-2xl">
+              <h2 className="text-2xl md:text-3xl font-bold text-[#8FE6B0] mb-4">
+                Congratulations!
+              </h2>
+              <p className="text-[#E6F5EC] text-lg leading-relaxed">
+                You’ve helped raise an amazing amount of money for Macmillan, which will encourage men to start talking about cancer, one dart at a time.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowCelebration(false)}
+                className="mt-6 px-6 py-3 bg-[#00A651] text-white font-semibold rounded-full hover:bg-[#00c765]"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </main>
   );
 }

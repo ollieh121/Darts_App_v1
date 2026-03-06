@@ -32,3 +32,9 @@ INSERT INTO teams (id, name, remaining_points) VALUES
   ('team1', 'Team 1', 100000),
   ('team2', 'Team 2', 100000)
 ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS support_messages (
+  id SERIAL PRIMARY KEY,
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);

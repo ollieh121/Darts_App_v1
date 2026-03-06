@@ -9,3 +9,14 @@
 body {
   font-family: var(--font-outfit), system-ui, sans-serif;
 }
+
+@keyframes confetti-fall {
+  to {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.animate-confetti-fall {
+  animation: confetti-fall linear forwards;
+}
