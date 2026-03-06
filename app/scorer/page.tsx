@@ -44,6 +44,8 @@ export default function ScorerPage() {
   const [backupJson, setBackupJson] = useState("");
   const [restoreStatus, setRestoreStatus] = useState<"idle" | "loading" | "ok" | "err">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [supportMessages, setSupportMessages] = useState<{ id: number; message: string; created_at: string }[]>([]);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   // Force redirect to login if not authenticated (client-side backup)
   useEffect(() => {
@@ -80,6 +82,37 @@ export default function ScorerPage() {
     const interval = setInterval(fetchGame, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  const fetchSupportMessages = async () => {
+    try {
+      const res = await fetch("/api/support-messages");
+      if (res.ok) {
+        const data = await res.json();
+        setSupportMessages(data);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    fetchSupportMessages();
+    const interval = setInterval(fetchSupportMessages, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function handleDeleteMessage(id: number) {
+    if (!confirm("Remove this message from the board?")) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/support-messages/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setSupportMessages((prev) => prev.filter((m) => m.id !== id));
+      }
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   useEffect(() => {
     if (!game?.isRunning) return;
@@ -523,6 +556,34 @@ export default function ScorerPage() {
                   180: <strong className="text-[#8FE6B0]">{t.count180 ?? 0}</strong>
                 </span>
               </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold text-[#E6F5EC] mb-2">Moderate support messages</h2>
+        <p className="text-[#C0E8D5] text-sm mb-3">
+          Remove messages with profanity or inappropriate content. They will disappear from the live score board.
+        </p>
+        <div className="max-h-48 overflow-y-auto space-y-2 rounded-lg border border-[#09673B] bg-[#002B18]/50 p-3">
+          {supportMessages.length === 0 && (
+            <p className="text-[#C0E8D5] text-sm">No support messages yet.</p>
+          )}
+          {supportMessages.map((m) => (
+            <div
+              key={m.id}
+              className="flex items-start justify-between gap-2 py-2 px-3 bg-[#01210F] rounded-lg"
+            >
+              <p className="text-[#E6F5EC] text-sm flex-1 min-w-0 break-words">{m.message}</p>
+              <button
+                type="button"
+                onClick={() => handleDeleteMessage(m.id)}
+                disabled={deletingId === m.id}
+                className="flex-shrink-0 px-2 py-1 text-red-300 hover:text-red-400 hover:bg-red-900/30 rounded text-xs font-medium disabled:opacity-50"
+              >
+                {deletingId === m.id ? "Removing…" : "Remove"}
+              </button>
             </div>
           ))}
         </div>
