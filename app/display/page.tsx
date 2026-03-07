@@ -3,12 +3,6 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-interface SupportMessage {
-  id: number;
-  message: string;
-  created_at: string;
-}
-
 interface Team {
   id: string;
   name: string;
@@ -55,73 +49,6 @@ function speakScore(teamName: string, score: number) {
   window.speechSynthesis.speak(u);
 }
 
-function SupportMessagesSection({
-  messages,
-  onNewMessage,
-}: {
-  messages: SupportMessage[];
-  onNewMessage: () => void;
-}) {
-  const [newMessage, setNewMessage] = useState("");
-  const [sending, setSending] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const msg = newMessage.trim();
-    if (!msg || sending) return;
-    setSending(true);
-    try {
-      const res = await fetch("/api/support-messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg }),
-      });
-      if (res.ok) {
-        setNewMessage("");
-        onNewMessage();
-      }
-    } finally {
-      setSending(false);
-    }
-  }
-
-  return (
-    <section className="mt-10 pt-8 border-t border-[#09673B]">
-      <h3 className="text-[#E6F5EC] font-semibold text-lg mb-3">Supportive messages</h3>
-      <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value.slice(0, 500))}
-          placeholder="Add a message of support..."
-          maxLength={500}
-          className="flex-1 px-4 py-2 bg-[#01210F] border border-[#09673B] rounded-lg text-white placeholder-[#6FBF8E]/60"
-        />
-        <button
-          type="submit"
-          disabled={!newMessage.trim() || sending}
-          className="px-4 py-2 bg-[#00A651] text-white font-semibold rounded-lg hover:bg-[#00c765] disabled:opacity-50"
-        >
-          {sending ? "Sending..." : "Send"}
-        </button>
-      </form>
-      <div className="max-h-40 overflow-y-auto space-y-2">
-        {messages.length === 0 && (
-          <p className="text-[#C0E8D5] text-sm">No messages yet. Be the first!</p>
-        )}
-        {messages.map((m) => (
-          <div
-            key={m.id}
-            className="py-2 px-3 bg-[#01210F]/80 rounded-lg text-[#E6F5EC] text-sm"
-          >
-            {m.message}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function Confetti() {
   const pieces = Array.from({ length: 80 }, (_, i) => ({
     id: i,
@@ -157,7 +84,6 @@ function Confetti() {
 export default function DisplayPage() {
   const [game, setGame] = useState<GameState | null>(null);
   const [timeDisplay, setTimeDisplay] = useState("12:00:00");
-  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
   const [showCelebration, setShowCelebration] = useState(false);
   const lastAnnouncedRef = useRef<Record<string, number>>({});
   const initialLoadRef = useRef(true);
@@ -215,23 +141,6 @@ export default function DisplayPage() {
       game.teams.every((t) => t.remainingPoints <= 0);
     if (bothComplete) setShowCelebration(true);
   }, [game?.teams]);
-
-  useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        const res = await fetch("/api/support-messages");
-        if (res.ok) {
-          const data = await res.json();
-          setSupportMessages(data);
-        }
-      } catch {
-        // ignore
-      }
-    };
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 15000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Optional: announce latest score per team when it changes (browser TTS; set NEXT_PUBLIC_ANNOUNCE_SCORES=1 to enable)
   useEffect(() => {
@@ -451,16 +360,6 @@ export default function DisplayPage() {
           )}
         </div>
       </section>
-
-      <SupportMessagesSection
-        messages={supportMessages}
-        onNewMessage={() => {
-          fetch("/api/support-messages")
-            .then((r) => r.ok && r.json())
-            .then((data) => data && setSupportMessages(data))
-            .catch(() => {});
-        }}
-      />
 
       <section className="mt-10 pt-8 border-t border-[#09673B] text-center">
         <p className="text-[#E6F5EC] font-semibold text-lg mb-4">
